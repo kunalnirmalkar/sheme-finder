@@ -13,7 +13,7 @@
     h1{font-size:20px;margin:0}
     .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
     .btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
-    .chip{background:#fff;padding:6px 8px;border-radius:8px;border:1px solid #eee}
+    .chip{background:#fff;padding:6px 8px;border-radius:8px;border:1px solid #eee;cursor:pointer}
     .chip.btn{background:var(--accent);color:#fff;border:none}
     main{display:grid;grid-template-columns:360px 1fr;gap:14px;margin-top:14px}
     .panel{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(11,110,253,0.06)}
@@ -30,9 +30,35 @@
     .lang-toggle{display:flex;gap:6px}
     .list{display:flex;flex-wrap:wrap;gap:8px}
     .doc{display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;border:1px dashed #eee}
+    #modal{max-height:80vh;overflow-y:auto}
+    #modalBody img{border-radius:8px;box-shadow:0 2px 8px rgba(11,110,253,0.1)}
+    #modalBody h3{color:var(--accent);margin-top:0}
+    #modalBody h4{color:#333;font-size:14px;margin-bottom:8px}
+    #modalBody p{font-size:14px;line-height:1.6}
     footer{margin-top:14px;text-align:center;color:#666;font-size:13px}
-    /* large-screen adjustments */
     @media(max-width:900px){main{grid-template-columns:1fr;padding:0} .controls{flex-wrap:wrap}}
+    /* Drawer overlay */
+    #drawerOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:200;opacity:0;pointer-events:none;transition:opacity 0.25s}
+    #drawerOverlay.open{opacity:1;pointer-events:all}
+    #drawer{position:fixed;top:0;right:-480px;width:460px;max-width:95vw;height:100vh;background:#fff;z-index:201;box-shadow:-4px 0 24px rgba(11,110,253,0.12);overflow-y:auto;transition:right 0.28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+    #drawer.open{right:0}
+    #drawerHeader{position:sticky;top:0;background:#fff;border-bottom:1px solid #eee;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+    #drawerHeader span{font-weight:600;font-size:15px;color:#111}
+    #drawerHeader button{background:#f0f4ff;border:none;padding:7px 13px;border-radius:7px;cursor:pointer;font-size:13px;color:#0b6efd;font-weight:500}
+    #drawerHeader button:hover{background:#e0eaff}
+    #drawerImg{width:100%;height:180px;object-fit:cover;display:block;background:#eef2ff}
+    #drawerContent{padding:18px;flex:1}
+    #drawerContent h1{color:#0b6efd;font-size:20px;margin:0 0 14px}
+    .dsec{margin-bottom:16px}
+    .dsec h2{color:#333;font-size:14px;font-weight:600;margin:0 0 6px;border-bottom:2px solid #0b6efd;padding-bottom:4px}
+    .dsec p{color:#555;font-size:14px;line-height:1.65;margin:0}
+    .dsec ul{list-style:none;padding:0;margin:0}
+    .dsec ul li{padding:7px 10px;background:#f5f8ff;border-radius:6px;margin-bottom:5px;border-left:3px solid #0b6efd;font-size:13px;color:#333}
+    .dbtns{display:flex;gap:10px;margin-top:18px;padding-bottom:10px}
+    .dbp{flex:1;padding:12px;background:#0b6efd;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
+    .dbp:hover{background:#0a5ecb}
+    .dbs{flex:1;padding:12px;background:#fff;color:#0b6efd;border:2px solid #0b6efd;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}
+    .dbs:hover{background:#f0f7ff}
   </style>
 </head>
 <body>
@@ -98,13 +124,22 @@
             <li>Offline-first: All data in the file (no setup).</li>
             <li>Bilingual: Hindi + English toggles for inclusivity.</li>
             <li>AI-powered personalized matching (optional Anthropic key input).</li>
-            <li>Direct official links & document checklist + voice readout for low-literacy users.</li>
+            <li>Direct official links &amp; document checklist + voice readout for low-literacy users.</li>
           </ul>
         </div>
       </section>
     </main>
+  </div>
 
-    <footer>Made for hackathon — open this file in any modern browser. Works offline.</footer>
+  <!-- Slide-in drawer (replaces popup) -->
+  <div id="drawerOverlay"></div>
+  <div id="drawer">
+    <div id="drawerHeader">
+      <span id="drawerTitle">Scheme Details</span>
+      <button id="closeDrawer">✕ Close</button>
+    </div>
+    <img id="drawerImg" src="" alt="" />
+    <div id="drawerContent"></div>
   </div>
 
   <script>
@@ -162,23 +197,28 @@
         openNotes: 'नोट खोलें',
         winningPoints: 'विजय बिंदु'
       }
-    }
+    };
 
-    // --- OFFLINE SCHEMES: add 6-8 local schemes ---
+    // --- OFFLINE SCHEMES ---
     const SCHEMES = [
-      { id:'ladli-mp', title:'Ladli Laxmi (MP)', states:['Madhya Pradesh','MP'], target:{gender:'female',minAge:0,maxAge:25}, desc:'Cash assistance for girls to encourage education and welfare.', docs:['Aadhaar','Birth certificate','Proof of residence'], url:'https://www.mp.gov.in/ladlilaxmi' },
-      { id:'kanya-up', title:'Kanya Sumangala (UP)', states:['Uttar Pradesh','UP'], target:{gender:'female',minAge:0,maxAge:25}, desc:'Support scheme for the girl child in UP.', docs:['Aadhaar','Birth certificate','Bank passbook'], url:'https://up.gov.in/kanyasumangala' },
-      { id:'pmkisan', title:'PM Kisan Samman Nidhi', states:[], target:{gender:'any',minAge:18}, desc:'Income support for small and marginal farmers.', docs:['Aadhaar','Land documents','Bank passbook'], url:'https://pmkisan.gov.in' },
-      { id:'ayushman', title:'Ayushman Bharat', states:[], target:{gender:'any',minAge:0}, desc:'Health insurance for eligible families.', docs:['Aadhaar','Family ID','Ration card'], url:'https://mera.pmjay.gov.in' },
-      { id:'ujjwala', title:'Ujjwala Yojana', states:[], target:{gender:'any',minAge:18}, desc:'Free LPG connection for poor households.', docs:['Aadhaar','Ration card'], url:'https://pmuy.gov.in' },
-      { id:'mgnrega', title:'MGNREGA', states:[], target:{gender:'any',minAge:18}, desc:'Employment guarantee scheme for rural households.', docs:['Aadhaar','Address proof'], url:'https://nrega.nic.in' },
-      { id:'ladli-up', title:'Beti Bachao (UP variant)', states:['Uttar Pradesh','UP'], target:{gender:'female',minAge:0,maxAge:18}, desc:'State-level support and scholarships for girls.', docs:['Birth certificate','Aadhaar'], url:'https://up.gov.in' }
+      { id:'ladli-mp', title:{en:'Ladli Laxmi (MP)',hi:'लाड़ली लक्ष्मी (MP)'}, states:['Madhya Pradesh','MP'], target:{gender:'female',minAge:0,maxAge:25}, desc:{en:'Cash assistance for girls to encourage education and welfare.',hi:'लड़कियों की शिक्षा और कल्याण को प्रोत्साहित करने के लिए नकद सहायता।'}, eligibility:{en:'Girls aged 0-25 years, born in Madhya Pradesh',hi:'0-25 वर्ष की लड़कियाँ, मध्य प्रदेश में जन्मी'}, docs:['Aadhaar','Birth certificate','Proof of residence'], image:'https://static.mygov.in/media/blog/2020/05/Ladli-laxmi-Yojna-thumb.jpg', url:'https://www.mp.gov.in/ladlilaxmi' },
+      { id:'kanya-up', title:{en:'Kanya Sumangala (UP)',hi:'कन्या सुमंगला (UP)'}, states:['Uttar Pradesh','UP'], target:{gender:'female',minAge:0,maxAge:25}, desc:{en:'Support scheme for the girl child in UP.',hi:'यूपी में बालिका के लिए सहायता योजना।'}, eligibility:{en:'Girls from birth to age 12 in UP, family income below threshold',hi:'यूपी में जन्म से 12 साल तक की लड़कियाँ, पारिवारिक आय सीमा से कम'}, docs:['Aadhaar','Birth certificate','Bank passbook'], image:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5I4lrE4ca9GdFW4dD5p0Ltb2e87ro2Ne4ow&s', url:'https://up.gov.in/kanyasumangala' },
+      { id:'pmkisan', title:{en:'PM Kisan Samman Nidhi',hi:'प्रधानमंत्री किसान सम्मान निधि'}, states:[], target:{gender:'any',minAge:18}, desc:{en:'Income support for small and marginal farmers.',hi:'छोटे और सीमांत किसानों के लिए आय समर्थन।'}, eligibility:{en:'Small and marginal farmers with land holding up to 2 hectares',hi:'2 हेक्टेयर तक भूमि वाले छोटे और सीमांत किसान'}, docs:['Aadhaar','Land documents','Bank passbook'], image:'https://d35xcwcl37xo08.cloudfront.net/current-affairs-wp-uploads/2025/07/PM-1.webp', url:'https://pmkisan.gov.in' },
+      { id:'ayushman', title:{en:'Ayushman Bharat',hi:'आयुष्मान भारत'}, states:[], target:{gender:'any',minAge:0}, desc:{en:'Health insurance for eligible families.',hi:'पात्र परिवारों के लिए स्वास्थ्य बीमा।'}, eligibility:{en:'Families listed in SECC 2011 or BPL categories',hi:'SECC 2011 या BPL श्रेणी में सूचीबद्ध परिवार'}, docs:['Aadhaar','Family ID','Ration card'], image:'https://nitrd.nic.in/wp-content/uploads/2024/11/01-2023-06-01T144235.620.png', url:'https://mera.pmjay.gov.in' },
+      { id:'ujjwala', title:{en:'Ujjwala Yojana',hi:'उज्ज्वला योजना'}, states:[], target:{gender:'any',minAge:18}, desc:{en:'Free LPG connection for poor households.',hi:'गरीब परिवारों के लिए मुफ्त एलपीजी कनेक्शन।'}, eligibility:{en:'BPL families and SECC households, age 18+',hi:'BPL परिवार और SECC घर, 18+ आयु'}, docs:['Aadhaar','Ration card'], image:'https://static.asianetnews.com/images/w-1280,h-720,imgid-01k25bjjcpqcwf724e2kcy5rcc,imgname-ujjwala-yojana-1754674055574.jpg', url:'https://pmuy.gov.in' },
+      { id:'mgnrega', title:{en:'MGNREGA',hi:'मनरेगा (MGNREGA)'}, states:[], target:{gender:'any',minAge:18}, desc:{en:'Employment guarantee scheme for rural households.',hi:'ग्रामीण परिवारों के लिए रोजगार गारंटी योजना।'}, eligibility:{en:'Adult members of rural households, age 18+',hi:'ग्रामीण परिवारों के वयस्क सदस्य, 18+ आयु'}, docs:['Aadhaar','Address proof'], image:'https://politicalsciencesolution.com/wp-content/uploads/2025/03/MGNREGA-Records-82-Surge-in-Employment-Generation.webp', url:'https://nrega.nic.in' },
+      { id:'ladli-up', title:{en:'Beti Bachao (UP variant)',hi:'बेटी बचाओ (UP)'}, states:['Uttar Pradesh','UP'], target:{gender:'female',minAge:0,maxAge:18}, desc:{en:'State-level support and scholarships for girls.',hi:'लड़कियों के लिए राज्य स्तरीय समर्थन और छात्रवृत्ति।'}, eligibility:{en:'Girls aged 0-18 in UP with income limits on family',hi:'यूपी में 0-18 वर्ष की लड़कियाँ, पारिवारिक आय सीमा सहित'}, docs:['Birth certificate','Aadhaar'], image:'https://www.ibef.org/uploads/govtschemes/Beti-Bachao-Beti-Padhao-intro.jpg', url:'https://up.gov.in' }
     ];
 
-    // --- populate states from schemes ---
-    const stateSet = new Set(); SCHEMES.forEach(s=>s.states.forEach(st=>stateSet.add(st)));
+    // --- populate states ---
+    const stateSet = new Set();
+    SCHEMES.forEach(s => s.states.forEach(st => stateSet.add(st)));
     const stateSelect = document.getElementById('state');
-    [...stateSet].sort().forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; stateSelect.appendChild(o)});
+    [...stateSet].sort().forEach(s => {
+      const o = document.createElement('option');
+      o.value = s; o.textContent = s;
+      stateSelect.appendChild(o);
+    });
 
     // --- DOM refs ---
     const schemesList = document.getElementById('schemesList');
@@ -188,23 +228,22 @@
     const closeModal = document.getElementById('closeModal');
     const checklistEl = document.getElementById('checklist');
     const anthropicKeyInput = document.getElementById('anthropicKey');
+    let currentDisplayedSchemes = []; // Keep empty until search is performed
 
     // --- language ---
     let LANG = 'en';
-    document.getElementById('enBtn').addEventListener('click',()=>setLang('en'));
-    document.getElementById('hiBtn').addEventListener('click',()=>setLang('hi'));
-    function setLang(l){ 
-      LANG=l; 
-      // Remove 'btn' class from both, then add it to the active one
+    document.getElementById('enBtn').addEventListener('click', () => setLang('en'));
+    document.getElementById('hiBtn').addEventListener('click', () => setLang('hi'));
+
+    function setLang(l) {
+      LANG = l;
       document.getElementById('enBtn').classList.remove('btn');
       document.getElementById('hiBtn').classList.remove('btn');
-      if(l === 'en') {
-        document.getElementById('enBtn').classList.add('btn');
-      } else {
-        document.getElementById('hiBtn').classList.add('btn');
-      }
+      if (l === 'en') document.getElementById('enBtn').classList.add('btn');
+      else document.getElementById('hiBtn').classList.add('btn');
       updateUI();
     }
+
     function updateUI() {
       document.getElementById('title').textContent = T[LANG].title;
       document.getElementById('subtitle').textContent = T[LANG].subtitle;
@@ -222,116 +261,247 @@
       document.getElementById('resultsTitle').textContent = T[LANG].matchingSchemes;
       document.getElementById('resultsSub').textContent = T[LANG].clickCardDetails;
       document.getElementById('showAll').textContent = T[LANG].showAll;
-      // update card buttons in schemes list
-      document.querySelectorAll('#schemesList button.chip').forEach(b => {
-        if(b.dataset.id) b.textContent = T[LANG].open;
-      });
-      document.querySelectorAll('#schemesList a.chip').forEach(a => {
-        a.textContent = T[LANG].official;
-      });
       document.getElementById('closeModal').textContent = T[LANG].close;
+      // Update empty state message if no schemes are displayed
+      if (currentDisplayedSchemes.length === 0 && schemesList.innerHTML.includes('Search')) {
+        const emptyMessage = LANG === 'en' ? 'Search and find matching schemes' : 'Search करने के बाद योजनाएँ दिखेंगी';
+        schemesList.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">' + emptyMessage + '</div>';
+      } else {
+        renderSchemes(currentDisplayedSchemes);
+      }
     }
 
-    // --- render schemes (cards) ---
-    function renderSchemes(list){ schemesList.innerHTML=''; if(list.length===0) schemesList.innerHTML='<div style="color:var(--muted)">No matches — show all</div>';
-      list.forEach(s=>{
-        const el = document.createElement('div'); el.className='card';
+    // --- render schemes ---
+    function renderSchemes(list) {
+      currentDisplayedSchemes = list;
+      schemesList.innerHTML = '';
+      if (list.length === 0) {
+        schemesList.innerHTML = '<div style="color:var(--muted)">' + (LANG === 'hi' ? 'कोई मेल नहीं मिला — सभी देखें आजमाएँ' : 'No matches — try Show all') + '</div>';
+        return;
+      }
+      list.forEach(s => {
+        const el = document.createElement('div');
+        el.className = 'card';
+        const title = typeof s.title === 'object' ? s.title[LANG] : s.title;
+        const desc = typeof s.desc === 'object' ? s.desc[LANG] : s.desc;
         el.innerHTML = `
           <div class="icon">🏷️</div>
-          <div class="meta"><h3>${s.title}</h3><p>${s.desc}</p><div style="font-size:13px;color:var(--muted)">${s.states.join(', ') || 'All states'}</div></div>
+          <div class="meta">
+            <h3>${title}</h3>
+            <p>${desc}</p>
+            <div style="font-size:13px;color:var(--muted)">${s.states.join(', ') || 'All states'}</div>
+          </div>
           <div style="display:flex;flex-direction:column;gap:8px">
             <button class="chip" data-id="${s.id}">${T[LANG].open}</button>
-            <a class="chip" href="${s.url}" target="_blank" rel="noopener">${T[LANG].official}</a>
           </div>
         `;
         schemesList.appendChild(el);
       });
-      // hook open buttons
-      schemesList.querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click',e=>openScheme(b.dataset.id)));
+      schemesList.querySelectorAll('button[data-id]').forEach(b =>
+        b.addEventListener('click', () => openScheme(b.dataset.id))
+      );
     }
 
-    // --- open scheme details ---
-    function openScheme(id){ const s = SCHEMES.find(x=>x.id===id); if(!s) return; modalTitle.textContent = s.title; modalBody.innerHTML = `<p>${s.desc}</p><h4>${T[LANG].documentsRequired}</h4>` +
-      s.docs.map(d=>`<div class="doc">✅ <strong>${d}</strong></div>`).join('') + `<p style="margin-top:8px"><a href="${s.url}" target="_blank">${T[LANG].visitOfficialPage}</a></p>`;
-      modal.style.display='block'; // also populate checklist area
+    // --- open scheme details in slide-in drawer ---
+    function openScheme(id) {
+      const s = SCHEMES.find(x => x.id === id);
+      if (!s) return;
+
+      const title = typeof s.title === 'object' ? s.title[LANG] : s.title;
+      const desc = typeof s.desc === 'object' ? s.desc[LANG] : s.desc;
+      const eligibility = typeof s.eligibility === 'object' ? s.eligibility[LANG] : s.eligibility;
+      console.log('Current LANG:', LANG, 'Eligibility:', eligibility);
+
+      const descLabel = LANG === 'hi' ? 'विवरण' : 'Description';
+      const eligLabel = LANG === 'hi' ? 'पात्रता' : 'Eligibility';
+      const docsLabel = LANG === 'hi' ? 'आवश्यक दस्तावेज़' : 'Documents Required';
+      const officialBtnLabel = LANG === 'hi' ? 'आधिकारिक वेबसाइट' : 'Visit Official Website';
+      const closeLabel = LANG === 'hi' ? 'बंद करें' : 'Close';
+
+      const docsHtml = s.docs.map(d => `<li>✅ ${d}</li>`).join('');
+
+      document.getElementById('drawerTitle').textContent = title;
+      document.getElementById('drawerImg').src = s.image;
+      document.getElementById('drawerImg').alt = title;
+      document.getElementById('closeDrawer').textContent = '✕ ' + closeLabel;
+
+      document.getElementById('drawerContent').innerHTML = `
+        <h1>${title}</h1>
+        <div class="dsec"><h2>${descLabel}</h2><p>${desc}</p></div>
+        <div class="dsec"><h2>${eligLabel}</h2><p>${eligibility}</p></div>
+        <div class="dsec"><h2>${docsLabel}</h2><ul>${docsHtml}</ul></div>
+        <div class="dbtns">
+          <button class="dbp" onclick="window.open('${s.url}','_blank')">🌐 ${officialBtnLabel}</button>
+          <button class="dbs" id="drawerCloseBtn">${closeLabel}</button>
+        </div>
+      `;
+
+      document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+
+      // open drawer
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('drawerOverlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+
       populateChecklist(s.docs);
-      // voice read
-      speak((LANG==='hi' ? 'योजना का विवरण: ' : 'Scheme details: ') + s.title + '. ' + s.desc + '. Documents: ' + s.docs.join(', '));
     }
-    closeModal.addEventListener('click',()=>modal.style.display='none');
+
+    function closeDrawer() {
+      document.getElementById('drawer').classList.remove('open');
+      document.getElementById('drawerOverlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
+    document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
+
+    closeModal.addEventListener('click', () => modal.style.display = 'none');
 
     // --- checklist ---
-    function populateChecklist(docs){ checklistEl.innerHTML=''; docs.forEach(d=>{
-      const id = 'c_'+d.replace(/\s+/g,'_'); const div = document.createElement('div'); div.className='doc'; div.innerHTML = `<input type="checkbox" id="${id}" /> <label for="${id}"> ${d}</label>`; checklistEl.appendChild(div);
-    })}
-    document.getElementById('voiceBtn').addEventListener('click',()=>{
-      // read checklist
-      const texts = Array.from(checklistEl.querySelectorAll('label')).map(l=>l.textContent.trim()); speak(texts.join('. '));
-    });
-    document.getElementById('exportChecklist').addEventListener('click',()=>{
-      const checked = Array.from(checklistEl.querySelectorAll('input:checked')).map(c=>c.nextSibling.textContent.trim()); const blob = new Blob([checked.join('\n')||'No items checked'],{type:'text/plain'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='checklist.txt'; a.click(); URL.revokeObjectURL(url);
-    });
-
-    // --- local matching algorithm (fallback if no AI) ---
-    function matchLocal({state,age,gender,keywords}){
-      const k = (keywords||'').toLowerCase();
-      return SCHEMES.map(s=>{ let score=0; if(s.states.length===0 || s.states.includes(state)) score+=3; if(s.target){ if(s.target.gender==='female' && gender==='female') score+=2; if(s.target.minAge && age>=s.target.minAge) score+=1; if(s.target.maxAge && age<=s.target.maxAge) score+=1 } if(k){ if(s.title.toLowerCase().includes(k) || s.desc.toLowerCase().includes(k)) score+=2 } return {...s,score}}).filter(s=>s.score>0).sort((a,b)=>b.score-a.score);
+    function populateChecklist(docs) {
+      checklistEl.innerHTML = '';
+      docs.forEach(d => {
+        const id = 'c_' + d.replace(/\s+/g, '_');
+        const div = document.createElement('div');
+        div.className = 'doc';
+        div.innerHTML = `<input type="checkbox" id="${id}" /> <label for="${id}"> ${d}</label>`;
+        checklistEl.appendChild(div);
+      });
     }
 
-    // --- speak helper for low-literacy users ---
-    function speak(text){ if(!('speechSynthesis' in window)) return; const u = new SpeechSynthesisUtterance(text); if(LANG==='hi') u.lang='hi-IN'; else u.lang='en-GB'; speechSynthesis.cancel(); speechSynthesis.speak(u); }
+    document.getElementById('voiceBtn').addEventListener('click', () => {
+      const texts = Array.from(checklistEl.querySelectorAll('label')).map(l => l.textContent.trim());
+      speak(texts.join('. '));
+    });
 
-    // --- form submit: try AI if key present else local ---
-    document.getElementById('userForm').addEventListener('submit',async function(e){ e.preventDefault(); const state = document.getElementById('state').value; const age = Number(document.getElementById('age').value||0); const gender = document.getElementById('gender').value || 'any'; const keywords = document.getElementById('keywords').value;
-      const apiKey = anthropicKeyInput.value.trim(); if(apiKey){ // call Anthropic (user will paste key)
-        try{
-          // NOTE: add your key to headers below: 'x-api-key': 'YOUR_KEY_HERE', 'anthropic-version': '2023-06-01'
+    document.getElementById('exportChecklist').addEventListener('click', () => {
+      const checked = Array.from(checklistEl.querySelectorAll('input:checked')).map(c => c.nextSibling.textContent.trim());
+      const blob = new Blob([checked.join('\n') || 'No items checked'], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'checklist.txt'; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // --- FIX: local matching — correctly extract string from bilingual objects ---
+    function matchLocal({ state, age, gender, keywords }) {
+      const k = (keywords || '').toLowerCase();
+      return SCHEMES.map(s => {
+        let score = 0;
+        // state match
+        if (s.states.length === 0 || s.states.includes(state)) score += 3;
+        // target match
+        if (s.target) {
+          if (s.target.gender === 'female' && gender === 'female') score += 2;
+          if (s.target.minAge !== undefined && age >= s.target.minAge) score += 1;
+          if (s.target.maxAge !== undefined && age <= s.target.maxAge) score += 1;
+        }
+        // keyword match — FIX: extract string from bilingual object before calling .toLowerCase()
+        if (k) {
+          const titleStr = (typeof s.title === 'object' ? s.title.en + ' ' + s.title.hi : s.title).toLowerCase();
+          const descStr  = (typeof s.desc  === 'object' ? s.desc.en  + ' ' + s.desc.hi  : s.desc ).toLowerCase();
+          if (titleStr.includes(k) || descStr.includes(k)) score += 2;
+        }
+        return { ...s, score };
+      }).filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+    }
+
+    // --- speak helper ---
+    function speak(text) {
+      if (!('speechSynthesis' in window)) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = LANG === 'hi' ? 'hi-IN' : 'en-GB';
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
+
+    // --- form submit ---
+    document.getElementById('userForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const state = document.getElementById('state').value;
+      const age = Number(document.getElementById('age').value || 0);
+      const gender = document.getElementById('gender').value;
+      const keywords = document.getElementById('keywords').value;
+
+      // Validation: Check required fields
+      if (!name) {
+        alert(LANG === 'hi' ? 'कृपया अपना नाम दर्ज करें' : 'Please enter your name');
+        return;
+      }
+      if (!state) {
+        alert(LANG === 'hi' ? 'कृपया अपना राज्य चुनें' : 'Please select your state');
+        return;
+      }
+      if (!age || age <= 0) {
+        alert(LANG === 'hi' ? 'कृपया वैध आयु दर्ज करें' : 'Please enter a valid age');
+        return;
+      }
+      if (!gender) {
+        alert(LANG === 'hi' ? 'कृपया अपना लिंग चुनें' : 'Please select your gender');
+        return;
+      }
+
+      const apiKey = anthropicKeyInput.value.trim();
+
+      if (apiKey) {
+        try {
           const prompt = `Human: I am ${age} years old, gender ${gender}, living in ${state}. My needs: ${keywords}. Suggest best matching government schemes and why. Provide top 5 with short checklist.\nAssistant:`;
           const resp = await fetch('https://api.anthropic.com/v1/complete', {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json', 'x-api-key': apiKey, 'anthropic-version':'2023-06-01' },
-            body: JSON.stringify({ model: 'claude-2', prompt, max_tokens: 400, temperature:0.2 })
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+            body: JSON.stringify({ model: 'claude-2', prompt, max_tokens: 400, temperature: 0.2 })
           });
-          if(!resp.ok) throw new Error('AI request failed '+resp.status);
-          const data = await resp.json(); const aiText = data.completion || data.output || JSON.stringify(data);
-          // show AI output in modal
-          modalTitle.textContent = 'AI Suggestions'; modalBody.innerHTML = `<pre style="white-space:pre-wrap">${escapeHtml(aiText)}</pre>`; modal.style.display='block'; speak('Here are suggested schemes');
-        }catch(err){ console.error(err); speak('AI failed, showing local matches'); const local = matchLocal({state,age,gender,keywords}); renderSchemes(local); }
+          if (!resp.ok) throw new Error('AI request failed ' + resp.status);
+          const data = await resp.json();
+          const aiText = data.completion || data.output || JSON.stringify(data);
+          modalTitle.textContent = 'AI Suggestions';
+          modalBody.innerHTML = `<pre style="white-space:pre-wrap">${escapeHtml(aiText)}</pre>`;
+          modal.style.display = 'block';
+          speak('Here are suggested schemes');
+        } catch (err) {
+          console.error(err);
+          speak('AI failed, showing local matches');
+          renderSchemes(matchLocal({ state, age, gender, keywords }));
+        }
       } else {
-        const local = matchLocal({state,age,gender,keywords}); renderSchemes(local);
+        renderSchemes(matchLocal({ state, age, gender, keywords }));
       }
     });
 
-    // --- helper to escape html ---
-    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
 
-    // --- show all button ---
-    document.getElementById('showAll').addEventListener('click',()=>renderSchemes(SCHEMES));
+    document.getElementById('showAll').addEventListener('click', () => renderSchemes(SCHEMES));
 
-    // --- test AI button (quick ping) ---
-    document.getElementById('testAI').addEventListener('click',async ()=>{
-      const apiKey = anthropicKeyInput.value.trim(); if(!apiKey){ alert('Paste your Anthropic key in the box first'); return; }
-      try{
-        const resp = await fetch('https://api.anthropic.com/v1/complete', { method:'POST', headers:{ 'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01' }, body: JSON.stringify({ model:'claude-2', prompt:'Human: Say hello\nAssistant:', max_tokens:50 })});
-        const data = await resp.json(); alert('AI replied: ' + (data.completion || data.output || JSON.stringify(data)) );
-      }catch(e){ alert('AI test failed: '+e.message); }
+    document.getElementById('testAI').addEventListener('click', async () => {
+      const apiKey = anthropicKeyInput.value.trim();
+      if (!apiKey) { alert('Paste your Anthropic key in the box first'); return; }
+      try {
+        const resp = await fetch('https://api.anthropic.com/v1/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: 'claude-2', prompt: 'Human: Say hello\nAssistant:', max_tokens: 50 })
+        });
+        const data = await resp.json();
+        alert('AI replied: ' + (data.completion || data.output || JSON.stringify(data)));
+      } catch (e) { alert('AI test failed: ' + e.message); }
     });
 
-    // judges panel toggle
-    document.getElementById('judgesBtn').addEventListener('click',()=>{ const p = document.getElementById('judgesPanel'); p.style.display = p.style.display==='none'?'block':'none'; });
+    document.getElementById('judgesBtn').addEventListener('click', () => {
+      const p = document.getElementById('judgesPanel');
+      p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    });
 
-    // initial render
-    renderSchemes(SCHEMES.slice(0,5));
+    anthropicKeyInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('testAI').click(); }
+    });
+
+    // initial render - DISABLED (schemes show only after search)
+    // renderSchemes(SCHEMES.slice(0, 5));
+    const emptyMessage = LANG === 'en' ? 'Search and find matching schemes' : 'Search करने के बाद योजनाएँ दिखेंगी';
+    schemesList.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">' + emptyMessage + '</div>';
     updateUI();
-    // helper: open scheme by id from cards
-    function openSchemeById(id){ openScheme(id); }
-
-    // small accessibility: enter key press on anthropicKey to test
-    anthropicKeyInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('testAI').click(); } });
-
-    // quick guide in console
-    console.log('TicTac single-file app loaded. Paste your Anthropic API key into the top-right field to enable AI suggestions.');
   </script>
 </body>
 </html>
-
