@@ -14,6 +14,7 @@
     .controls{margin-left:auto;display:flex;gap:8px;align-items:center}
     .btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
     .chip{background:#fff;padding:6px 8px;border-radius:8px;border:1px solid #eee}
+    .chip.btn{background:var(--accent);color:#fff;border:none}
     main{display:grid;grid-template-columns:360px 1fr;gap:14px;margin-top:14px}
     .panel{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(11,110,253,0.06)}
     form .row{display:flex;gap:8px;margin-bottom:8px}
@@ -109,8 +110,58 @@
   <script>
     // --- TRANSLATIONS ---
     const T = {
-      en: { find: 'Find Schemes', selectState: 'Select state', docChecklist: 'Document checklist' },
-      hi: { find: 'योजनाएँ देखें', selectState: 'राज्य चुनें', docChecklist: 'दस्तावेज़ सूची' }
+      en: {
+        title: 'TicTac — Scheme Finder',
+        subtitle: 'Offline-first: works without internet. Hindi / English',
+        selectState: 'Select state',
+        name: 'Name / नाम',
+        age: 'Age / आयु',
+        gender: 'Gender / लिंग',
+        female: 'Female / महिला',
+        male: 'Male / पुरुष',
+        keywords: 'Keywords (example: education, girl)',
+        find: 'Find Schemes',
+        docChecklist: 'Document checklist',
+        read: '🔊 Read',
+        export: 'Export',
+        matchingSchemes: 'Matching schemes',
+        clickCardDetails: 'Click a card to open details',
+        showAll: 'Show all',
+        open: 'Open',
+        official: 'Official',
+        documentsRequired: 'Documents required',
+        close: 'Close',
+        visitOfficialPage: 'Visit official page',
+        forJudges: 'For Judges:',
+        openNotes: 'Open notes',
+        winningPoints: 'Winning points'
+      },
+      hi: {
+        title: 'टिकटैक — योजना खोजक',
+        subtitle: 'ऑफलाइन-प्रथम: इंटरनेट के बिना काम करता है। हिंदी / अंग्रेजी',
+        selectState: 'राज्य चुनें',
+        name: 'नाम / Name',
+        age: 'आयु / Age',
+        gender: 'लिंग / Gender',
+        female: 'महिला / Female',
+        male: 'पुरुष / Male',
+        keywords: 'कीवर्ड (उदाहरण: शिक्षा, लड़की)',
+        find: 'योजनाएँ देखें',
+        docChecklist: 'दस्तावेज़ सूची',
+        read: '🔊 सुनें',
+        export: 'निर्यात करें',
+        matchingSchemes: 'मेल खाने वाली योजनाएँ',
+        clickCardDetails: 'विवरण के लिए कार्ड पर क्लिक करें',
+        showAll: 'सभी देखें',
+        open: 'खोलें',
+        official: 'आधिकारिक',
+        documentsRequired: 'आवश्यक दस्तावेज़',
+        close: 'बंद करें',
+        visitOfficialPage: 'आधिकारिक पृष्ठ पर जाएँ',
+        forJudges: 'न्यायाधीशों के लिए:',
+        openNotes: 'नोट खोलें',
+        winningPoints: 'विजय बिंदु'
+      }
     }
 
     // --- OFFLINE SCHEMES: add 6-8 local schemes ---
@@ -142,7 +193,44 @@
     let LANG = 'en';
     document.getElementById('enBtn').addEventListener('click',()=>setLang('en'));
     document.getElementById('hiBtn').addEventListener('click',()=>setLang('hi'));
-    function setLang(l){ LANG=l; document.getElementById('enBtn').classList.toggle('btn',l==='en'); document.getElementById('hiBtn').classList.toggle('btn',l==='hi'); }
+    function setLang(l){ 
+      LANG=l; 
+      // Remove 'btn' class from both, then add it to the active one
+      document.getElementById('enBtn').classList.remove('btn');
+      document.getElementById('hiBtn').classList.remove('btn');
+      if(l === 'en') {
+        document.getElementById('enBtn').classList.add('btn');
+      } else {
+        document.getElementById('hiBtn').classList.add('btn');
+      }
+      updateUI();
+    }
+    function updateUI() {
+      document.getElementById('title').textContent = T[LANG].title;
+      document.getElementById('subtitle').textContent = T[LANG].subtitle;
+      document.getElementById('name').placeholder = T[LANG].name;
+      document.getElementById('age').placeholder = T[LANG].age;
+      document.getElementById('gender').children[0].textContent = T[LANG].gender;
+      document.getElementById('gender').children[1].textContent = T[LANG].female;
+      document.getElementById('gender').children[2].textContent = T[LANG].male;
+      document.getElementById('keywords').placeholder = T[LANG].keywords;
+      document.getElementById('state').children[0].textContent = T[LANG].selectState;
+      document.querySelector('button[type=submit]').textContent = T[LANG].find;
+      document.querySelector('div > strong').textContent = T[LANG].docChecklist;
+      document.getElementById('voiceBtn').textContent = T[LANG].read;
+      document.getElementById('exportChecklist').textContent = T[LANG].export;
+      document.getElementById('resultsTitle').textContent = T[LANG].matchingSchemes;
+      document.getElementById('resultsSub').textContent = T[LANG].clickCardDetails;
+      document.getElementById('showAll').textContent = T[LANG].showAll;
+      // update card buttons in schemes list
+      document.querySelectorAll('#schemesList button.chip').forEach(b => {
+        if(b.dataset.id) b.textContent = T[LANG].open;
+      });
+      document.querySelectorAll('#schemesList a.chip').forEach(a => {
+        a.textContent = T[LANG].official;
+      });
+      document.getElementById('closeModal').textContent = T[LANG].close;
+    }
 
     // --- render schemes (cards) ---
     function renderSchemes(list){ schemesList.innerHTML=''; if(list.length===0) schemesList.innerHTML='<div style="color:var(--muted)">No matches — show all</div>';
@@ -152,8 +240,8 @@
           <div class="icon">🏷️</div>
           <div class="meta"><h3>${s.title}</h3><p>${s.desc}</p><div style="font-size:13px;color:var(--muted)">${s.states.join(', ') || 'All states'}</div></div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button class="chip" data-id="${s.id}">Open</button>
-            <a class="chip" href="${s.url}" target="_blank" rel="noopener">Official</a>
+            <button class="chip" data-id="${s.id}">${T[LANG].open}</button>
+            <a class="chip" href="${s.url}" target="_blank" rel="noopener">${T[LANG].official}</a>
           </div>
         `;
         schemesList.appendChild(el);
@@ -163,8 +251,8 @@
     }
 
     // --- open scheme details ---
-    function openScheme(id){ const s = SCHEMES.find(x=>x.id===id); if(!s) return; modalTitle.textContent = s.title; modalBody.innerHTML = `<p>${s.desc}</p><h4>Documents required</h4>` +
-      s.docs.map(d=>`<div class="doc">✅ <strong>${d}</strong></div>`).join('') + `<p style="margin-top:8px"><a href="${s.url}" target="_blank">Visit official page</a></p>`;
+    function openScheme(id){ const s = SCHEMES.find(x=>x.id===id); if(!s) return; modalTitle.textContent = s.title; modalBody.innerHTML = `<p>${s.desc}</p><h4>${T[LANG].documentsRequired}</h4>` +
+      s.docs.map(d=>`<div class="doc">✅ <strong>${d}</strong></div>`).join('') + `<p style="margin-top:8px"><a href="${s.url}" target="_blank">${T[LANG].visitOfficialPage}</a></p>`;
       modal.style.display='block'; // also populate checklist area
       populateChecklist(s.docs);
       // voice read
@@ -234,6 +322,7 @@
 
     // initial render
     renderSchemes(SCHEMES.slice(0,5));
+    updateUI();
     // helper: open scheme by id from cards
     function openSchemeById(id){ openScheme(id); }
 
@@ -245,3 +334,4 @@
   </script>
 </body>
 </html>
+
